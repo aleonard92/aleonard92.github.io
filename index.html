@@ -107,6 +107,90 @@ La cuenta usada para configurar el recaptcha del widget es:</p>
         }
       });
   }, [executeRecaptcha]);
+</code></pre>
+<h3 id="como-trabajar-con-la-maquina-de-estados">Como trabajar con la maquina de estados</h3>
+<p>La maquina de estados es una libreria (<strong>bci-pyme-pj-state-machine-ui</strong>) que nos permite comunicarnos con el backend mediante estados y eventos de la siguiente manera:</p>
+<p>Este caso se para enviar eventos a la maquina de estados</p>
+<pre><code class="language-js">  const { send } = useCustomMachine(BCIContext);
+
+  useEffect(() =&gt; {
+    send(new LoadDocumentsAutomatically());
+  }, []);
+
+  const handleSubmit = (data: IBackgroundInfoViewFormData) =&gt; {
+    send(new SubmitCommand(data.passwordSii.trim(), data.acceptTerms));
+    navigate('/loading-tax-folder');
+  };
+</code></pre>
+<p>Este seria el caso para recibir los eventos de la maquina padre en el primer useEffect y de una maquina hija en el 2do ejemplo:</p>
+<pre><code class="language-js">  useEffect(() =&gt; {
+    if (state.matches('showOtp')) navigate('/otp-code');
+    if (state.matches('representative')) navigate('/user');
+    if (state.matches('enteringRut')) navigate('/company');
+    if (state.matches('ok')) navigate('/create-account');
+    if (state.matches('legalbotRevisionManual')) navigate('/manual-revision');
+    if (state.matches('errorRutInvalido')) setShowError(true);
+
+    if (state.matches('showBciEmpresarios')) window.location.href = 'https://www.bci.cl/empresarios';
+  }, [state]);
+
+  useEffect(() =&gt; {
+    service.onTransition((_, event: any) =&gt; {
+      if (event.type === 'done.invoke.sendSubscriptionEventId') setProgress(50);
+      if (event.type === 'message') setProgress(100);
+      if (event.type === 'goToErrorSolicitanteNoApoderado') navigate('/rejected-rut-apoderado-final');
+      switch (event.error) {
+        case 'RechazadaNoRES':
+          navigate('/rejected-no-res');
+          break;
+        case 'RechazadaFiltroBciEmpresa':
+          navigate('/rejected-filer-bci');
+          break;
+        case 'RechazadaActividadesOGiroNoPermitidos':
+          navigate('/rejected-turn-not-allowed');
+          break;
+        case 'RechazadaNoInicioActividades':
+          navigate('/rejected-initial-activities');
+          break;
+        case 'RechazadaTerminoActividades':
+          navigate('/rejected-ended-activities');
+          break;
+        case 'RechazadaDeterminandoApoderadosSocios':
+          navigate('/rejected-legal');
+          break;
+        case 'RechazadaCantidadSocios':
+          navigate('/rejected-cantidad-socios');
+          break;
+        case 'RechazadaApoderadosSinFacultades':
+          navigate('/rejected-legal-apderado');
+          break;
+        case 'RechazadaTipoSociedad':
+          navigate('/rejected-tipo-sociedad');
+          break;
+        case 'ErrorClaveUnica':
+        case 'RechazadaVerificacionManualIdentidad':
+          navigate('/error-clave-unica', { state: { status: event.error } });
+          break;
+        case 'RechazadaMaxNumeroIntento':
+          navigate('/maximos-reintentos-otp');
+          break;
+        default:
+          // Handle other cases or provide a default action
+          break;
+      }
+    });
+  }, []);
+</code></pre>
+<h3 id="como-trabajar-con-los-eventos-de-accord">Como trabajar con los eventos de accord</h3>
+<p>Para esperar los eventos de la firma nos integramos con el <strong><em>lendbot de accord</em></strong> y recibimos una serie de eventos emitidos de front a front de la siguiente manera:</p>
+<pre><code class="language-js">  const { status: isSigning } = useListenPostMessage('close_app');
+  const { status: isAccordReaderError } = useListenPostMessage('accord-reader:error');
+  // const { status: isSignedDocument } = useListenPostMessage('signed_documents');
+
+  const { status: shared } = useListenPostMessage('accord-reader:shared');
+  const { status: allSigned } = useListenPostMessage('accord-reader:all-signed');
+  const { status: rejected } = useListenPostMessage('accord-reader:rejected');
+  const { status: notAllSigned } = useListenPostMessage('accord-reader:not-all-signed');
 </code></pre></div>
             </div>
         </div>
@@ -190,5 +274,5 @@ La cuenta usada para configurar el recaptcha del widget es:</p>
 
 <!--
 MkDocs version : 1.5.3
-Build Date UTC : 2024-01-10 01:01:38.656075+00:00
+Build Date UTC : 2024-01-15 18:59:21.120258+00:00
 -->
